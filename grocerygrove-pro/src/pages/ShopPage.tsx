@@ -19,6 +19,7 @@ const ShopPage = () => {
   const [showCart, setShowCart] = useState(false);
   const [showInvoice, setShowInvoice] = useState<null | ReturnType<typeof generateInvoice>>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,15 +59,12 @@ const ShopPage = () => {
     return inv;
   }
 
-  const handleCheckout = async () => {
+  const handleInitiateCheckout = () => {
     if (cart.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
 
-    if (isPlacingOrder) return;
-
-    // Check stock
     for (const item of cart) {
       const prod = products.find((p) => p.id === item.product.id);
       if (!prod || prod.stock < item.quantity) {
@@ -74,6 +72,12 @@ const ShopPage = () => {
         return;
       }
     }
+
+    setShowPayment(true);
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (isPlacingOrder) return;
     try {
       setIsPlacingOrder(true);
       await createOrderInApi(
@@ -88,9 +92,9 @@ const ShopPage = () => {
       setShowInvoice(inv);
       clearCart();
       setShowCart(false);
-      toast.success("Order placed successfully!");
+      setShowPayment(false);
+      toast.success("Payment confirmed & Order placed!");
 
-      // Refresh products from backend to reflect new stock levels
       try {
         const apiProducts = await fetchProductsFromApi();
         setProducts(apiProducts);
@@ -229,11 +233,46 @@ const ShopPage = () => {
                   <div className="flex justify-between text-sm"><span>Subtotal</span><span>₹{cartTotal}</span></div>
                   <div className="flex justify-between text-sm"><span>GST (5%)</span><span>₹{Math.round(cartTotal * 0.05)}</span></div>
                   <div className="flex justify-between font-bold"><span>Total</span><span className="text-primary">₹{Math.round(cartTotal * 1.05)}</span></div>
-                  <Button className="w-full" onClick={handleCheckout} disabled={isPlacingOrder}>
-                    {isPlacingOrder ? "Placing order..." : "Checkout & Generate Invoice"}
+                  <Button className="w-full" onClick={handleInitiateCheckout} disabled={isPlacingOrder}>
+                    Checkout & Generate Invoice
                   </Button>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Payment Modal */}
+      <AnimatePresence>
+        {showPayment && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-foreground/30 z-50" onClick={() => !isPlacingOrder && setShowPayment(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed flex flex-col items-center inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[400px] bg-card rounded-2xl z-50 shadow-elevated p-6"
+            >
+              <h2 className="text-xl font-display font-bold mb-4">Scan to Pay</h2>
+              <div className="bg-white p-4 rounded-xl mb-4">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=kaviarasan27092004@okhdfcbank&pn=GroceryGrove&am=${Math.round(cartTotal * 1.05)}`}
+                  alt="UPI QR Code"
+                  className="w-48 h-48"
+                />
+              </div>
+              <p className="text-lg font-bold text-primary mb-1">Total: ₹{Math.round(cartTotal * 1.05)}</p>
+              <p className="text-sm text-muted-foreground mb-6">UPI ID: kaviarasan27092004@okhdfcbank</p>
+
+              <div className="w-full space-y-3">
+                <Button className="w-full" onClick={handleConfirmCheckout} disabled={isPlacingOrder}>
+                  {isPlacingOrder ? "Processing..." : "Owner Confirm Payment"}
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setShowPayment(false)} disabled={isPlacingOrder}>
+                  Cancel
+                </Button>
+              </div>
             </motion.div>
           </>
         )}
