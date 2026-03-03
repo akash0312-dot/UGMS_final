@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Product, CartItem, Invoice, Worker, Agency, workers as initialWorkers, agencies as initialAgencies } from '@/data/mockData';
+import { Product, CartItem, Invoice, Worker, Agency } from '@/data/mockData';
 
 const loadInitialInvoices = (): Invoice[] => {
   if (typeof window === 'undefined') return [];
@@ -22,10 +22,8 @@ interface AppState {
   // Auth
   role: 'none' | 'customer' | 'admin';
   setRole: (role: 'none' | 'customer' | 'admin') => void;
-
-  // Owners
-  owners: Owner[];
-  addOwner: (owner: Owner) => void;
+  authToken: string | null;
+  setAuthToken: (token: string | null) => void;
 
   // Products
   products: Product[];
@@ -47,12 +45,14 @@ interface AppState {
 
   // Workers
   workers: Worker[];
+  setWorkers: (workers: Worker[]) => void;
   addWorker: (worker: Worker) => void;
   updateWorker: (id: string, worker: Partial<Worker>) => void;
   deleteWorker: (id: string) => void;
 
   // Agencies
   agencies: Agency[];
+  setAgencies: (agencies: Agency[]) => void;
   addAgency: (agency: Agency) => void;
   updateAgency: (id: string, agency: Partial<Agency>) => void;
   deleteAgency: (id: string) => void;
@@ -61,9 +61,8 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   role: 'none',
   setRole: (role) => set({ role }),
-
-  owners: [{ name: 'Admin', email: 'admin@ugms.com', phone: '9876543200', password: 'admin123' }],
-  addOwner: (owner) => set((state) => ({ owners: [...state.owners, owner] })),
+  authToken: null,
+  setAuthToken: (authToken) => set({ authToken }),
 
   products: [],
   setProducts: (products) => set({ products }),
@@ -118,19 +117,39 @@ export const useStore = create<AppState>((set, get) => ({
       return { invoices: updated };
     }),
 
-  workers: initialWorkers,
-  addWorker: (worker) => set((state) => ({ workers: [...state.workers, worker] })),
+  workers: [],
+  setWorkers: (workers) => set({ workers }),
+  addWorker: (worker) =>
+    set((state) => {
+      const updated = [...state.workers, worker];
+      return { workers: updated };
+    }),
   updateWorker: (id, data) =>
-    set((state) => ({
-      workers: state.workers.map((w) => (w.id === id ? { ...w, ...data } : w)),
-    })),
-  deleteWorker: (id) => set((state) => ({ workers: state.workers.filter((w) => w.id !== id) })),
+    set((state) => {
+      const updated = state.workers.map((w) => (w.id === id ? { ...w, ...data } : w));
+      return { workers: updated };
+    }),
+  deleteWorker: (id) =>
+    set((state) => {
+      const updated = state.workers.filter((w) => w.id !== id);
+      return { workers: updated };
+    }),
 
-  agencies: initialAgencies,
-  addAgency: (agency) => set((state) => ({ agencies: [...state.agencies, agency] })),
+  agencies: [],
+  setAgencies: (agencies) => set({ agencies }),
+  addAgency: (agency) =>
+    set((state) => {
+      const updated = [...state.agencies, agency];
+      return { agencies: updated };
+    }),
   updateAgency: (id, data) =>
-    set((state) => ({
-      agencies: state.agencies.map((a) => (a.id === id ? { ...a, ...data } : a)),
-    })),
-  deleteAgency: (id) => set((state) => ({ agencies: state.agencies.filter((a) => a.id !== id) })),
+    set((state) => {
+      const updated = state.agencies.map((a) => (a.id === id ? { ...a, ...data } : a));
+      return { agencies: updated };
+    }),
+  deleteAgency: (id) =>
+    set((state) => {
+      const updated = state.agencies.filter((a) => a.id !== id);
+      return { agencies: updated };
+    }),
 }));

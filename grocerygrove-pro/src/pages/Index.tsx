@@ -8,12 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { loginInApi, signupInApi } from "@/lib/api";
 
 const Index = () => {
   const navigate = useNavigate();
   const setRole = useStore((s) => s.setRole);
-  const owners = useStore((s) => s.owners);
-  const addOwner = useStore((s) => s.addOwner);
+  const setAuthToken = useStore((s) => s.setAuthToken);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [email, setEmail] = useState("");
@@ -31,19 +31,20 @@ const Index = () => {
     navigate("/shop");
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const found = owners.find((o) => o.email === email && o.password === password);
-    if (found) {
+    try {
+      const res = await loginInApi(email.trim(), password);
+      setAuthToken(res.access_token);
       setRole("admin");
       navigate("/admin");
-      toast.success(`Welcome back, ${found.name}!`);
-    } else {
-      toast.error("Invalid credentials. Please check your email and password.");
+      toast.success("Welcome back!");
+    } catch (err: any) {
+      toast.error(err.message || "Invalid credentials. Please check your email and password.");
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signupName.trim() || !signupEmail.trim() || !signupPhone.trim() || !signupPassword) {
       toast.error("Please fill all fields"); return;
@@ -54,15 +55,21 @@ const Index = () => {
     if (signupPassword !== signupConfirm) {
       toast.error("Passwords do not match"); return;
     }
-    if (owners.some((o) => o.email === signupEmail.trim())) {
-      toast.error("An account with this email already exists"); return;
+    try {
+      const res = await signupInApi({
+        name: signupName.trim(),
+        email: signupEmail.trim(),
+        password: signupPassword,
+      });
+      setAuthToken(res.access_token);
+      setRole("admin");
+      toast.success("Account created!");
+      setShowSignup(false);
+      navigate("/admin");
+      setSignupName(""); setSignupEmail(""); setSignupPhone(""); setSignupPassword(""); setSignupConfirm("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create account");
     }
-    addOwner({ name: signupName.trim(), email: signupEmail.trim(), phone: signupPhone.trim(), password: signupPassword });
-    toast.success("Account created! You can now login.");
-    setShowSignup(false);
-    setShowLogin(true);
-    setEmail(signupEmail.trim());
-    setSignupName(""); setSignupEmail(""); setSignupPhone(""); setSignupPassword(""); setSignupConfirm("");
   };
 
   return (

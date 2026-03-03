@@ -17,6 +17,7 @@ const navItems = [
 const AdminLayout = () => {
   const navigate = useNavigate();
   const setRole = useStore((s) => s.setRole);
+  const setAuthToken = useStore((s) => s.setAuthToken);
   const products = useStore((s) => s.products);
   const lowStockCount = products.filter((p) => p.stock <= p.minStock).length;
 
@@ -61,7 +62,7 @@ const AdminLayout = () => {
           <Button
             variant="ghost"
             className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground"
-            onClick={() => { setRole("none"); navigate("/"); }}
+            onClick={() => { setAuthToken(null); setRole("none"); navigate("/"); }}
           >
             <LogOut className="h-4 w-4 mr-2" /> Logout
           </Button>

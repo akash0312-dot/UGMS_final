@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { fetchProductsFromApi, createProductInApi, restockProductInApi } from "@/lib/api";
+import { fetchProductsFromApi, createProductInApi, createSupplierInApi, restockProductInApi, updateProductInApi } from "@/lib/api";
+import EmojiPicker from 'emoji-picker-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const InventoryPage = () => {
   const products = useStore((s) => s.products);
   const agencies = useStore((s) => s.agencies);
-  const addAgency = useStore((s) => s.addAgency);
   const setProducts = useStore((s) => s.setProducts);
 
   useEffect(() => {
@@ -29,11 +30,14 @@ const InventoryPage = () => {
   }, [setProducts]);
 
   const lowStock = products.filter((p) => p.stock <= p.minStock);
+  const existingCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
 
   // Add product dialog
   const [addOpen, setAddOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const [isNewCategory, setIsNewCategory] = useState(false);
   const [newPrice, setNewPrice] = useState("");
   const [newCostPrice, setNewCostPrice] = useState("");
   const [newStock, setNewStock] = useState("");
@@ -54,10 +58,24 @@ const InventoryPage = () => {
   const [restockCost, setRestockCost] = useState("");
 
   const resetAddForm = () => {
-    setNewName(""); setNewCategory(""); setNewPrice(""); setNewCostPrice(""); setNewStock("");
+    setEditId(null);
+    setNewName(""); setNewCategory(""); setIsNewCategory(false); setNewPrice(""); setNewCostPrice(""); setNewStock("");
     setNewMinStock(""); setNewImage("📦"); setSupplierMode("existing");
     setSelectedAgency(""); setNewAgencyName(""); setNewAgencyContact("");
     setNewAgencyPhone(""); setNewAgencyEmail(""); setNewAgencyAddress("");
+  };
+
+  const openEdit = (p: any) => {
+    setEditId(p.id);
+    setNewName(p.name);
+    setNewCategory(p.category);
+    setIsNewCategory(!existingCategories.includes(p.category));
+    setNewPrice(String(p.price));
+    setNewCostPrice(String(p.costPrice));
+    setNewStock(String(p.stock));
+    setNewMinStock(String(p.minStock));
+    setNewImage(p.image);
+    setAddOpen(true);
   };
 
   const handleAddProduct = async () => {
@@ -66,43 +84,64 @@ const InventoryPage = () => {
       return;
     }
 
-    // Supplier handling remains local for now
+    let supplierId: string | undefined = undefined;
+    if (supplierMode === "existing" && selectedAgency) {
+      supplierId = selectedAgency;
+    }
+
     if (supplierMode === "new") {
       if (!newAgencyName || !newAgencyPhone) {
         toast.error("Please fill supplier name and phone");
         return;
       }
-      const agencyId = `agency-${Date.now()}`;
-      addAgency({
-        id: agencyId,
-        name: newAgencyName,
-        contactPerson: newAgencyContact,
-        phone: newAgencyPhone,
-        email: newAgencyEmail,
-        address: newAgencyAddress,
-        productsSupplied: [newName],
-      });
+      try {
+        const created = await createSupplierInApi({
+          name: newAgencyName,
+          contactPerson: newAgencyContact,
+          phone: newAgencyPhone,
+          email: newAgencyEmail,
+          address: newAgencyAddress,
+        });
+        supplierId = created.id;
+      } catch (err: any) {
+        toast.error(err.message || "Failed to create supplier");
+        return;
+      }
     }
 
     try {
-      await createProductInApi({
-        name: newName,
-        category: newCategory || "General",
-        sale_price: Number(newPrice),
-        stock_qty: Number(newStock),
-        min_threshold: Number(newMinStock) || 5,
-        image_url: newImage,
-        cost_price: Number(newCostPrice),
-      });
+      if (editId) {
+        await updateProductInApi(editId, {
+          name: newName,
+          category: newCategory || "General",
+          sale_price: Number(newPrice),
+          stock_qty: Number(newStock),
+          min_threshold: Number(newMinStock) || 5,
+          image_url: newImage,
+          cost_price: Number(newCostPrice),
+        });
+        toast.success(`Product "${newName}" updated!`);
+      } else {
+        await createProductInApi({
+          name: newName,
+          category: newCategory || "General",
+          sale_price: Number(newPrice),
+          stock_qty: Number(newStock),
+          min_threshold: Number(newMinStock) || 5,
+          image_url: newImage,
+          cost_price: Number(newCostPrice),
+          supplier_id: supplierId ? Number(supplierId) : undefined,
+        });
+        toast.success(`Product "${newName}" added!`);
+      }
 
       const apiProducts = await fetchProductsFromApi();
       setProducts(apiProducts);
 
-      toast.success(`Product "${newName}" added!`);
       resetAddForm();
       setAddOpen(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to add product");
+      toast.error(err.message || "Failed to add/update product");
     }
   };
 
@@ -212,6 +251,9 @@ const InventoryPage = () => {
                     )}
                   </td>
                   <td className="p-3 text-right">
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>
+                      Edit
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => { setRestockId(p.id); setRestockOpen(true); }}>
                       Restock
                     </Button>
@@ -223,12 +265,15 @@ const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Add Product Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      {/* Add/Edit Product Dialog */}
+      <Dialog open={addOpen} onOpenChange={(open) => {
+        if (!open) resetAddForm();
+        setAddOpen(open);
+      }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>Fill in the product and supplier details below.</DialogDescription>
+            <DialogTitle>{editId ? "Edit Product" : "Add New Product"}</DialogTitle>
+            <DialogDescription>Fill in the product details below.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -238,7 +283,27 @@ const InventoryPage = () => {
               </div>
               <div className="space-y-1">
                 <Label>Category</Label>
-                <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Grains" />
+                {isNewCategory ? (
+                  <div className="flex gap-2">
+                    <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Grains" className="flex-1" />
+                    <Button type="button" variant="outline" size="icon" onClick={() => { setIsNewCategory(false); setNewCategory(existingCategories[0] || "General"); }}>✕</Button>
+                  </div>
+                ) : (
+                  <Select value={newCategory} onValueChange={(val) => {
+                    if (val === '__new__') {
+                      setIsNewCategory(true);
+                      setNewCategory("");
+                    } else {
+                      setNewCategory(val);
+                    }
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
+                    <SelectContent>
+                      {existingCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      <SelectItem value="__new__" className="text-primary font-medium">+ Add New Category</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-4 gap-3">
@@ -259,12 +324,19 @@ const InventoryPage = () => {
                 <Input type="number" value={newMinStock} onChange={(e) => setNewMinStock(e.target.value)} placeholder="5" />
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 flex flex-col items-start gap-2">
               <Label>Emoji Icon</Label>
-              <Input value={newImage} onChange={(e) => setNewImage(e.target.value)} placeholder="📦" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-12 w-16 text-2xl p-0">{newImage}</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border-none bg-transparent" align="start">
+                  <EmojiPicker onEmojiClick={(data) => setNewImage(data.emoji)} />
+                </PopoverContent>
+              </Popover>
             </div>
 
-            <div className="border-t border-border pt-4">
+            {!editId && <div className="border-t border-border pt-4">
               <Label className="text-base font-semibold">Supplier Details</Label>
               <div className="flex gap-2 mt-2">
                 <Button size="sm" variant={supplierMode === "existing" ? "default" : "outline"} onClick={() => setSupplierMode("existing")}>Existing Supplier</Button>
@@ -310,11 +382,11 @@ const InventoryPage = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { resetAddForm(); setAddOpen(false); }}>Cancel</Button>
-            <Button onClick={handleAddProduct}>Add Product</Button>
+            <Button onClick={handleAddProduct}>{editId ? "Save Changes" : "Add Product"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

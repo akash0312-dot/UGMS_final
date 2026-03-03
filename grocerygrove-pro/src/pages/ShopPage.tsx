@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchProductsFromApi, createOrderInApi } from "@/lib/api";
 
-const categories = ["All", "Grains", "Pulses", "Oils", "Essentials", "Beverages", "Dairy", "Bakery", "Vegetables"];
+const baseCategories = ["All", "Grains", "Pulses", "Oils", "Essentials", "Beverages", "Dairy", "Bakery", "Vegetables"];
 
 const ShopPage = () => {
   const navigate = useNavigate();
@@ -20,6 +20,9 @@ const ShopPage = () => {
   const [showInvoice, setShowInvoice] = useState<null | ReturnType<typeof generateInvoice>>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+
+  const dynamicCategories = ["All", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const categories = dynamicCategories.length > 1 ? dynamicCategories : baseCategories;
 
   useEffect(() => {
     (async () => {

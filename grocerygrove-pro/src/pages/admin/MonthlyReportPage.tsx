@@ -1,9 +1,31 @@
-import { monthlyReport } from "@/data/mockData";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { fetchMonthlySummaryFromApi } from "@/lib/api";
+import { toast } from "sonner";
 
 const MonthlyReportPage = () => {
-  const { totalSales, totalPurchaseCost, workerSalaries, otherExpenses, netProfit } = monthlyReport;
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalPurchaseCost, setTotalPurchaseCost] = useState(0);
+  const [workerSalaries, setWorkerSalaries] = useState(0);
+  const [otherExpenses] = useState(0);
+  const [netProfit, setNetProfit] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const summary = await fetchMonthlySummaryFromApi();
+        setTotalSales(summary.total_revenue ?? 0);
+        setWorkerSalaries(summary.total_salaries ?? 0);
+        setTotalPurchaseCost(summary.total_purchase_costs ?? 0);
+        setNetProfit(summary.net_profit ?? 0);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load monthly summary");
+      }
+    };
+    void load();
+  }, []);
+
   const totalExpenses = totalPurchaseCost + workerSalaries + otherExpenses;
 
   const expenseData = [

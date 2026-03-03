@@ -1,48 +1,38 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { useStore } from "@/store/useStore";
-import { useMemo } from "react";
+import { fetchDailySalesFromApi } from "@/lib/api";
+import { toast } from "sonner";
+
+interface DailySalesRow {
+  date: string;
+  totalAmount: number;
+  billCount: number;
+  profit: number;
+  topProducts: string[];
+}
 
 const DailyReportPage = () => {
-  const invoices = useStore((s) => s.invoices);
+  const [dailySales, setDailySales] = useState<DailySalesRow[]>([]);
 
-  const dailySales = useMemo(() => {
-    const map = new Map<string, { date: string; totalAmount: number; billCount: number; profit: number; productCounts: Record<string, number> }>();
-
-    // Process all invoices
-    const sortedInvoices = [...invoices].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    sortedInvoices.forEach(inv => {
-      // Split date to get the day string appropriately
-      const dateStr = inv.date.split(',')[0];
-      if (!map.has(dateStr)) {
-        map.set(dateStr, { date: dateStr, totalAmount: 0, billCount: 0, profit: 0, productCounts: {} });
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const payload = await fetchDailySalesFromApi();
+        const row: DailySalesRow = {
+          date: payload.date,
+          totalAmount: payload.total_revenue,
+          billCount: payload.orders_count,
+          profit: payload.total_revenue, // profit approximation until purchase costs are tracked
+          topProducts: (payload.top_products ?? []).slice(0, 2).map((p: any) => p.product_name),
+        };
+        setDailySales([row]);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load daily sales report");
       }
-      const day = map.get(dateStr)!;
-      day.totalAmount += inv.total;
-      day.billCount++;
-      day.profit += inv.profit || 0;
-
-      inv.items.forEach(item => {
-        day.productCounts[item.name] = (day.productCounts[item.name] || 0) + item.quantity;
-      });
-    });
-
-    return Array.from(map.values()).map(day => {
-      const topProducts = Object.entries(day.productCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 2)
-        .map(e => e[0]);
-
-      return {
-        date: day.date,
-        totalAmount: day.totalAmount,
-        billCount: day.billCount,
-        profit: day.profit,
-        topProducts
-      };
-    });
-  }, [invoices]);
+    };
+    void load();
+  }, []);
 
   const total = dailySales.reduce((s, d) => s + d.totalAmount, 0);
   const totalBills = dailySales.reduce((s, d) => s + d.billCount, 0);

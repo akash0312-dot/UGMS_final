@@ -66,6 +66,8 @@ class Worker(db.Model):
     experience_years = db.Column(db.Float, default=0)
     phone = db.Column(db.String(50))
     salary = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    days_present = db.Column(db.Integer, nullable=False, default=0)
+    days_absent = db.Column(db.Integer, nullable=False, default=0)
     joining_date = db.Column(db.Date, default=date.today)
     is_active = db.Column(db.Boolean, default=True)
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { motion } from "framer-motion";
 import { Plus, Edit, Trash2, X } from "lucide-react";
@@ -8,14 +8,29 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Worker } from "@/data/mockData";
+import { createWorkerInApi, deleteWorkerInApi, fetchWorkersFromApi, updateWorkerInApi } from "@/lib/api";
 
 const emptyWorker: Omit<Worker, "id"> = { name: "", position: "", experience: 0, salary: 0, phone: "", email: "", daysPresent: 0, daysAbsent: 0 };
 
 const WorkersPage = () => {
-  const { workers, addWorker, updateWorker, deleteWorker } = useStore();
+  const { workers, setWorkers } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Worker | null>(null);
   const [form, setForm] = useState<Omit<Worker, "id">>(emptyWorker);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const apiWorkers = await fetchWorkersFromApi();
+        setWorkers(apiWorkers);
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error(err);
+        toast.error(err.message || "Failed to load workers");
+      }
+    };
+    void load();
+  }, [setWorkers]);
 
   const totalPresent = workers.reduce((s, w) => s + w.daysPresent, 0);
   const totalAbsent = workers.reduce((s, w) => s + w.daysAbsent, 0);
@@ -24,19 +39,42 @@ const WorkersPage = () => {
   const openAdd = () => { setEditing(null); setForm(emptyWorker); setOpen(true); };
   const openEdit = (w: Worker) => { setEditing(w); setForm({ name: w.name, position: w.position, experience: w.experience, salary: w.salary, phone: w.phone, email: w.email, daysPresent: w.daysPresent, daysAbsent: w.daysAbsent }); setOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.position) { toast.error("Name and position are required"); return; }
     if (editing) {
-      updateWorker(editing.id, form);
-      toast.success("Worker updated");
+      try {
+        await updateWorkerInApi(editing.id, form);
+        const apiWorkers = await fetchWorkersFromApi();
+        setWorkers(apiWorkers);
+        toast.success("Worker updated");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to update worker");
+        return;
+      }
     } else {
-      addWorker({ ...form, id: "W" + String(workers.length + 1).padStart(3, "0") });
-      toast.success("Worker added");
+      try {
+        await createWorkerInApi(form);
+        const apiWorkers = await fetchWorkersFromApi();
+        setWorkers(apiWorkers);
+        toast.success("Worker added");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to add worker");
+        return;
+      }
     }
     setOpen(false);
   };
 
-  const handleDelete = (id: string) => { deleteWorker(id); toast.success("Worker removed"); };
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteWorkerInApi(id);
+      const apiWorkers = await fetchWorkersFromApi();
+      setWorkers(apiWorkers);
+      toast.success("Worker removed");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove worker");
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">

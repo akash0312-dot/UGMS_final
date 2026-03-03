@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { motion } from "framer-motion";
 import { Plus, Edit, Trash2 } from "lucide-react";
@@ -8,30 +8,61 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Agency } from "@/data/mockData";
+import { createSupplierInApi, deleteSupplierInApi, fetchSuppliersFromApi, updateSupplierInApi } from "@/lib/api";
 
 const emptyAgency: Omit<Agency, "id"> = { name: "", contactPerson: "", phone: "", email: "", address: "", productsSupplied: [] };
 
 const SuppliersPage = () => {
-  const { agencies, addAgency, updateAgency, deleteAgency } = useStore();
+  const { agencies, setAgencies } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Agency | null>(null);
   const [form, setForm] = useState<Omit<Agency, "id">>(emptyAgency);
   const [productsStr, setProductsStr] = useState("");
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const apiSuppliers = await fetchSuppliersFromApi();
+        setAgencies(apiSuppliers);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load suppliers");
+      }
+    };
+    void load();
+  }, [setAgencies]);
+
   const openAdd = () => { setEditing(null); setForm(emptyAgency); setProductsStr(""); setOpen(true); };
   const openEdit = (a: Agency) => { setEditing(a); setForm({ name: a.name, contactPerson: a.contactPerson, phone: a.phone, email: a.email, address: a.address, productsSupplied: a.productsSupplied }); setProductsStr(a.productsSupplied.join(", ")); setOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name) { toast.error("Agency name is required"); return; }
     const data = { ...form, productsSupplied: productsStr.split(",").map((s) => s.trim()).filter(Boolean) };
-    if (editing) {
-      updateAgency(editing.id, data);
-      toast.success("Supplier updated");
-    } else {
-      addAgency({ ...data, id: "A" + String(agencies.length + 1).padStart(3, "0") });
-      toast.success("Supplier added");
+    try {
+      if (editing) {
+        await updateSupplierInApi(editing.id, {
+          name: data.name,
+          contactPerson: data.contactPerson,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+        });
+        toast.success("Supplier updated");
+      } else {
+        await createSupplierInApi({
+          name: data.name,
+          contactPerson: data.contactPerson,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+        });
+        toast.success("Supplier added");
+      }
+      const apiSuppliers = await fetchSuppliersFromApi();
+      setAgencies(apiSuppliers);
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save supplier");
     }
-    setOpen(false);
   };
 
   return (
@@ -54,7 +85,23 @@ const SuppliersPage = () => {
               </div>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(a)}><Edit className="h-3 w-3" /></Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { deleteAgency(a.id); toast.success("Removed"); }}><Trash2 className="h-3 w-3" /></Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-destructive"
+                  onClick={async () => {
+                    try {
+                      await deleteSupplierInApi(a.id);
+                      const apiSuppliers = await fetchSuppliersFromApi();
+                      setAgencies(apiSuppliers);
+                      toast.success("Removed");
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to remove supplier");
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
               </div>
             </div>
             <div className="space-y-1 text-sm">

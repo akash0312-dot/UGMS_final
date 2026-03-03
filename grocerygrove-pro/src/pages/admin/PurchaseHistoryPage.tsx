@@ -1,26 +1,73 @@
-import { useStore } from "@/store/useStore";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Receipt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { fetchOrdersFromApi } from "@/lib/api";
+import { toast } from "sonner";
+
+interface HistoryOrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+interface HistoryOrder {
+  id: string;
+  date: string;
+  items: HistoryOrderItem[];
+  subtotal: number;
+  gst: number;
+  total: number;
+}
 
 const PurchaseHistoryPage = () => {
-  const invoices = useStore((s) => s.invoices);
+  const [orders, setOrders] = useState<HistoryOrder[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const apiOrders = await fetchOrdersFromApi();
+        const mapped: HistoryOrder[] = apiOrders.map((o) => {
+          const items = o.items.map((it) => ({
+            name: it.product_name ?? `Product #${it.product_id}`,
+            quantity: it.quantity,
+            price: it.unit_price,
+          }));
+          const subtotal = o.total_amount;
+          const gst = 0;
+          const total = o.total_amount;
+          return {
+            id: `ORD-${o.id}`,
+            date: o.created_at ?? "",
+            items,
+            subtotal,
+            gst,
+            total,
+          };
+        });
+        setOrders(mapped);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to load purchase history");
+      }
+    };
+    void load();
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold">Purchase History</h1>
-        <p className="text-muted-foreground text-sm">All customer invoices and transactions</p>
+        <p className="text-muted-foreground text-sm">All customer invoices and transactions (from database)</p>
       </div>
 
-      {invoices.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="rounded-xl bg-card shadow-card border border-border p-12 text-center">
           <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">No purchases yet. Invoices will appear here after customer checkouts.</p>
+          <p className="text-muted-foreground">No purchases yet. Orders will appear here after customer checkouts.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {invoices.map((inv, i) => (
+          {orders.map((inv, i) => (
             <motion.div
               key={inv.id}
               initial={{ opacity: 0, y: 10 }}
