@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
-import { LayoutDashboard, Users, Package, Truck, BarChart3, TrendingUp, LogOut, Store, AlertTriangle, History } from "lucide-react";
+import { LayoutDashboard, Users, Package, Truck, BarChart3, TrendingUp, LogOut, Store, AlertTriangle, History, Mail, ClipboardList, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,9 @@ const navItems = [
   { to: "/admin/purchase-history", icon: History, label: "Purchase History" },
   { to: "/admin/daily-report", icon: BarChart3, label: "Daily Sales" },
   { to: "/admin/monthly-report", icon: TrendingUp, label: "Monthly Report" },
+  { to: "/admin/hr", icon: Store, label: "HR Management" },
+  { to: "/admin/salary-requests", icon: ClipboardList, label: "Salary Requests" },
+  { to: "/admin/messages", icon: Mail, label: "Inbox" },
 ];
 
 const AdminLayout = () => {
@@ -26,7 +29,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside className="w-64 gradient-hero border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-5 flex items-center gap-3">
-          <Store className="h-7 w-7" style={{ color: "hsl(152, 55%, 45%)" }} />
+          <ShoppingBasket className="h-7 w-7" style={{ color: "hsl(152, 55%, 45%)" }} />
           <div>
             <h1 className="font-display font-bold text-lg" style={{ color: "hsl(0, 0%, 100%)" }}>UGMS</h1>
             <p className="text-xs" style={{ color: "hsl(140, 15%, 60%)" }}>Admin Panel</p>

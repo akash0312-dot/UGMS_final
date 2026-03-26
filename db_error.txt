@@ -1,0 +1,41 @@
+Traceback (most recent call last):
+  File "E:\erp(UGMS)\ugms1\UGMS_final\debug.py", line 10, in <module>
+    ensure_default_worker_categories()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\erp(UGMS)\ugms1\UGMS_final\backend\models.py", line 85, in ensure_default_worker_categories
+    ).first():
+      ~~~~~^^
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py", line 2237, in _execute_internal
+    bind = self.get_bind(**bind_arguments)
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\session.py", line 53, in get_bind
+    engines = self._db.engines
+              ^^^^^^^^^^^^^^^^
+  File "C:\Users\akash\AppData\Roaming\Python\Python313\site-packages\flask_sqlalchemy\extension.py", line 690, in engines
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: The current Flask app is not registered with this 'SQLAlchemy' instance. Did you forget to call 'init_app', or did you create multiple 'SQLAlchemy' instances?

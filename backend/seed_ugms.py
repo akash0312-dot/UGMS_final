@@ -1,5 +1,29 @@
 from app import create_app
-from models import db, User, Product, Supplier, Worker
+from models import (
+    DEFAULT_WORKER_CATEGORY_NAMES,
+    Product,
+    Supplier,
+    User,
+    Worker,
+    WorkerCategory,
+    db,
+)
+
+
+def _ensure_worker_categories():
+    for name in DEFAULT_WORKER_CATEGORY_NAMES:
+        if not WorkerCategory.query.filter(
+            db.func.lower(WorkerCategory.name) == name.lower()
+        ).first():
+            db.session.add(WorkerCategory(name=name))
+    db.session.flush()
+
+
+def _category_id_by_name(name: str):
+    cat = WorkerCategory.query.filter(
+        db.func.lower(WorkerCategory.name) == name.lower()
+    ).first()
+    return cat.id if cat else None
 
 
 def seed():
@@ -7,6 +31,8 @@ def seed():
     with app.app_context():
         # Ensure tables exist
         db.create_all()
+
+        _ensure_worker_categories()
 
         # ----- Admin user -----
         admin_email = "admin@ugms.com"
@@ -80,19 +106,49 @@ def seed():
         # ----- Workers -----
         if Worker.query.count() == 0:
             workers = [
-                dict(code="W001", name="Rahul Sharma", role="Cashier", experience=3, phone="9876543210", salary=18000),
-                dict(code="W002", name="Priya Patel", role="Storekeeper", experience=5, phone="9876543211", salary=22000),
-                dict(code="W003", name="Amit Kumar", role="Delivery", experience=2, phone="9876543212", salary=15000),
+                dict(
+                    code="W001",
+                    name="Rahul Sharma",
+                    role="Cashier",
+                    category="picker",
+                    experience=3,
+                    phone="9876543210",
+                    salary=18000,
+                    password="rahul123",
+                ),
+                dict(
+                    code="W002",
+                    name="Priya Patel",
+                    role="Storekeeper",
+                    category="stock filler",
+                    experience=5,
+                    phone="9876543211",
+                    salary=22000,
+                    password="priya123",
+                ),
+                dict(
+                    code="W003",
+                    name="Amit Kumar",
+                    role="Delivery",
+                    category="delivery person",
+                    experience=2,
+                    phone="9876543212",
+                    salary=15000,
+                    password="amit123",
+                ),
             ]
             for w in workers:
+                cid = _category_id_by_name(w["category"])
                 worker = Worker(
                     worker_code=w["code"],
                     name=w["name"],
                     role=w["role"],
+                    category_id=cid,
                     experience_years=w["experience"],
                     phone=w["phone"],
                     salary=w["salary"],
                 )
+                worker.set_password(w["password"])
                 db.session.add(worker)
 
             print("Created 3 sample workers.")

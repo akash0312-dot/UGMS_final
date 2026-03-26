@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Search, Plus, Minus, Trash2, ArrowLeft, Store } from "lucide-react";
+import { ShoppingCart, Search, Plus, Minus, Trash2, ArrowLeft, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +120,7 @@ const ShopPage = () => {
             <Button variant="ghost" size="icon" onClick={() => { setRole("none"); navigate("/"); }}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Store className="h-6 w-6 text-primary" />
+            <ShoppingBasket className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-display font-bold">UGMS Shop</h1>
           </div>
           <Button variant="outline" className="relative" onClick={() => setShowCart(!showCart)}>
@@ -293,7 +293,7 @@ const ShopPage = () => {
               className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full bg-card rounded-2xl z-50 shadow-elevated overflow-auto max-h-[90vh] p-6"
             >
               <div className="text-center mb-6">
-                <Store className="h-8 w-8 text-primary mx-auto mb-2" />
+                <ShoppingBasket className="h-8 w-8 text-primary mx-auto mb-2" />
                 <h2 className="text-xl font-display font-bold">UGMS Invoice</h2>
                 <p className="text-sm text-muted-foreground">{showInvoice.id} • {showInvoice.date}</p>
               </div>

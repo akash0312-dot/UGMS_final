@@ -20,8 +20,8 @@ export interface Owner {
 
 interface AppState {
   // Auth
-  role: 'none' | 'customer' | 'admin';
-  setRole: (role: 'none' | 'customer' | 'admin') => void;
+  role: "admin" | "customer" | "none" | "hr" | "worker";
+  setRole: (role: "admin" | "customer" | "none" | "hr" | "worker") => void;
   authToken: string | null;
   setAuthToken: (token: string | null) => void;
 

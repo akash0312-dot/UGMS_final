@@ -56,6 +56,39 @@ class Product(db.Model):
     order_items = db.relationship("OrderItem", back_populates="product")
 
 
+class WorkerCategory(db.Model):
+    __tablename__ = "worker_categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
+    workers = db.relationship("Worker", back_populates="category")
+
+
+# Default roles shown in admin worker dropdown (created automatically if missing).
+DEFAULT_WORKER_CATEGORY_NAMES = (
+    "HR",
+    "picker",
+    "accountant",
+    "loadman",
+    "stock filler",
+    "delivery person",
+)
+
+
+def ensure_default_worker_categories() -> None:
+    """Idempotently add standard worker roles to the database."""
+    added = False
+    for name in DEFAULT_WORKER_CATEGORY_NAMES:
+        if not WorkerCategory.query.filter(
+            db.func.lower(WorkerCategory.name) == name.lower()
+        ).first():
+            db.session.add(WorkerCategory(name=name))
+            added = True
+    if added:
+        db.session.commit()
+
+
 class Worker(db.Model):
     __tablename__ = "workers"
 
@@ -63,6 +96,9 @@ class Worker(db.Model):
     worker_code = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(150), nullable=False)
     role = db.Column(db.String(100))
+    category_id = db.Column(db.Integer, db.ForeignKey("worker_categories.id"), nullable=True)
+    category = db.relationship("WorkerCategory", back_populates="workers")
+    password_hash = db.Column(db.String(255), nullable=True)
     experience_years = db.Column(db.Float, default=0)
     phone = db.Column(db.String(50))
     salary = db.Column(db.Numeric(10, 2), nullable=False, default=0)
@@ -73,6 +109,14 @@ class Worker(db.Model):
 
     attendances = db.relationship("WorkerAttendance", back_populates="worker")
     salary_payments = db.relationship("SalaryPayment", back_populates="worker")
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
 
 
 class WorkerAttendance(db.Model):
@@ -134,4 +178,47 @@ class Purchase(db.Model):
     total_cost = db.Column(db.Numeric(10, 2), nullable=False, default=0)
 
     supplier = db.relationship("Supplier")
+
+
+class LeaveRequest(db.Model):
+    __tablename__ = "leave_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    worker_id = db.Column(db.Integer, db.ForeignKey("workers.id"), nullable=False)
+    date = db.Column(db.Date, nullable=False, index=True)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default="Pending") # Pending, Approved, Rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    worker = db.relationship("Worker", backref=db.backref("leave_requests", lazy=True))
+
+
+class SalaryChangeRequest(db.Model):
+    __tablename__ = "salary_change_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    worker_id = db.Column(db.Integer, db.ForeignKey("workers.id"), nullable=False)
+    requested_by_role = db.Column(db.String(20))
+    proposed_salary = db.Column(db.Numeric(10, 2), nullable=True)
+    proposed_bonus = db.Column(db.Numeric(10, 2), nullable=True)
+    status = db.Column(db.String(20), default="Pending") # Pending, Approved, Rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    worker = db.relationship("Worker", backref="salary_change_requests")
+
+
+class Message(db.Model):
+    __tablename__ = "messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_worker_id = db.Column(db.Integer, db.ForeignKey("workers.id"), nullable=True)
+    sender_role = db.Column(db.String(20), nullable=False)
+    receiver_worker_id = db.Column(db.Integer, db.ForeignKey("workers.id"), nullable=True)
+    receiver_role = db.Column(db.String(20), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender = db.relationship("Worker", foreign_keys=[sender_worker_id])
+    receiver = db.relationship("Worker", foreign_keys=[receiver_worker_id])
 

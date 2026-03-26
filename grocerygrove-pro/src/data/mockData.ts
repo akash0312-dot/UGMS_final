@@ -2,12 +2,15 @@ export interface Worker {
   id: string;
   name: string;
   position: string;
+  categoryId: number | null;
+  categoryName: string | null;
   experience: number;
   salary: number;
   phone: string;
   email: string;
   daysPresent: number;
   daysAbsent: number;
+  hasPassword?: boolean;
 }
 
 export interface Product {
@@ -56,11 +59,11 @@ export interface DailySale {
 }
 
 export const workers: Worker[] = [
-  { id: "W001", name: "Rahul Sharma", position: "Cashier", experience: 3, salary: 18000, phone: "9876543210", email: "rahul@ugms.com", daysPresent: 24, daysAbsent: 2 },
-  { id: "W002", name: "Priya Patel", position: "Storekeeper", experience: 5, salary: 22000, phone: "9876543211", email: "priya@ugms.com", daysPresent: 22, daysAbsent: 4 },
-  { id: "W003", name: "Amit Kumar", position: "Delivery", experience: 2, salary: 15000, phone: "9876543212", email: "amit@ugms.com", daysPresent: 25, daysAbsent: 1 },
-  { id: "W004", name: "Sneha Reddy", position: "Cashier", experience: 1, salary: 16000, phone: "9876543213", email: "sneha@ugms.com", daysPresent: 20, daysAbsent: 6 },
-  { id: "W005", name: "Vikram Singh", position: "Manager", experience: 8, salary: 35000, phone: "9876543214", email: "vikram@ugms.com", daysPresent: 26, daysAbsent: 0 },
+  { id: "W001", name: "Rahul Sharma", position: "Cashier", categoryId: null, categoryName: "picker", experience: 3, salary: 18000, phone: "9876543210", email: "rahul@ugms.com", daysPresent: 24, daysAbsent: 2 },
+  { id: "W002", name: "Priya Patel", position: "Storekeeper", categoryId: null, categoryName: "stock filler", experience: 5, salary: 22000, phone: "9876543211", email: "priya@ugms.com", daysPresent: 22, daysAbsent: 4 },
+  { id: "W003", name: "Amit Kumar", position: "Delivery", categoryId: null, categoryName: "delivery person", experience: 2, salary: 15000, phone: "9876543212", email: "amit@ugms.com", daysPresent: 25, daysAbsent: 1 },
+  { id: "W004", name: "Sneha Reddy", position: "Cashier", categoryId: null, categoryName: "picker", experience: 1, salary: 16000, phone: "9876543213", email: "sneha@ugms.com", daysPresent: 20, daysAbsent: 6 },
+  { id: "W005", name: "Vikram Singh", position: "Manager", categoryId: null, categoryName: "HR", experience: 8, salary: 35000, phone: "9876543214", email: "vikram@ugms.com", daysPresent: 26, daysAbsent: 0 },
 ];
 
 export const products: Product[] = [

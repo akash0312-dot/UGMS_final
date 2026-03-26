@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ShoppingCart, Shield, Store, UserPlus } from "lucide-react";
+import { ShoppingCart, Shield, Store, UserPlus, ShoppingBasket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { useState } from "react";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { loginInApi, signupInApi } from "@/lib/api";
+import { loginInApi, signupInApi, workerLoginInApi } from "@/lib/api";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -18,6 +18,14 @@ const Index = () => {
   const [showSignup, setShowSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [showHrLogin, setShowHrLogin] = useState(false);
+  const [hrWorkerCode, setHrWorkerCode] = useState("");
+  const [hrPassword, setHrPassword] = useState("");
+
+  const [showWorkerLogin, setShowWorkerLogin] = useState(false);
+  const [workerCode, setWorkerCode] = useState("");
+  const [workerPassword, setWorkerPassword] = useState("");
 
   // Signup fields
   const [signupName, setSignupName] = useState("");
@@ -41,6 +49,48 @@ const Index = () => {
       toast.success("Welcome back!");
     } catch (err: any) {
       toast.error(err.message || "Invalid credentials. Please check your email and password.");
+    }
+  };
+
+  const handleHrLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await workerLoginInApi(hrWorkerCode.trim(), hrPassword);
+      setAuthToken(res.access_token);
+
+      const payload = JSON.parse(atob(res.access_token.split('.')[1]));
+      const catName = payload?.category_name;
+
+      if (catName && catName.toUpperCase() === "HR") {
+        setRole("hr");
+        navigate("/hr");
+        toast.success("Welcome, Manager!");
+      } else {
+        toast.error("Access denied. You do not have HR or Manager privileges.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Invalid Staff ID or Password");
+    }
+  };
+
+  const handleWorkerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await workerLoginInApi(workerCode.trim(), workerPassword);
+      setAuthToken(res.access_token);
+
+      const payload = JSON.parse(atob(res.access_token.split('.')[1]));
+      const catName = payload?.category_name;
+
+      if (catName && catName.toUpperCase() === "HR") {
+        toast.error("HR Managers should use the HR Portal.");
+      } else {
+        setRole("worker");
+        navigate("/worker");
+        toast.success("Welcome to the Employee Portal!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Invalid Staff ID or Password");
     }
   };
 
@@ -82,7 +132,7 @@ const Index = () => {
           className="text-center mb-12"
         >
           <div className="inline-flex items-center gap-3 mb-4">
-            <Store className="h-10 w-10 text-primary" style={{ color: "hsl(152, 55%, 45%)" }} />
+            <ShoppingBasket className="h-10 w-10 text-primary" style={{ color: "hsl(152, 55%, 45%)" }} />
             <h1 className="text-5xl font-bold font-display" style={{ color: "hsl(0, 0%, 100%)" }}>
               UGMS
             </h1>
@@ -126,6 +176,42 @@ const Index = () => {
             </h2>
             <p style={{ color: "hsl(140, 15%, 65%)" }}>
               Manage workers, inventory, suppliers, and view reports.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            onClick={() => setShowHrLogin(true)}
+            className="group cursor-pointer rounded-2xl p-8 border border-border/20 bg-card/10 backdrop-blur-sm hover:bg-card/20 transition-all duration-300"
+          >
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform mx-auto">
+              <UserPlus className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-display font-bold mb-2 text-center text-white">
+              HR / Manager Portal
+            </h2>
+            <p className="text-center text-gray-300">
+              Manage attendance, leaves, and staff salaries.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            onClick={() => setShowWorkerLogin(true)}
+            className="group cursor-pointer rounded-2xl p-8 border border-border/20 bg-card/10 backdrop-blur-sm hover:bg-card/20 transition-all duration-300"
+          >
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform mx-auto">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-display font-bold mb-2 text-center text-white">
+              Employee Portal
+            </h2>
+            <p className="text-center text-gray-300">
+              Access your dashboard securely, track shifts, and request leaves.
             </p>
           </motion.div>
         </div>
@@ -202,6 +288,48 @@ const Index = () => {
               Already have an account? Sign In
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* HR Login Dialog */}
+      <Dialog open={showHrLogin} onOpenChange={setShowHrLogin}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Manager / HR Login</DialogTitle>
+            <DialogDescription>Enter your assigned ID and password to manage workers.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleHrLogin} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="hrCode">Manager ID</Label>
+              <Input id="hrCode" type="text" value={hrWorkerCode} onChange={(e) => setHrWorkerCode(e.target.value)} placeholder="HR001" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hrPass">Password</Label>
+              <Input id="hrPass" type="password" value={hrPassword} onChange={(e) => setHrPassword(e.target.value)} placeholder="••••••" required />
+            </div>
+            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Access Portal</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Login Dialog */}
+      <Dialog open={showWorkerLogin} onOpenChange={setShowWorkerLogin}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Employee Login</DialogTitle>
+            <DialogDescription>Enter your assigned Staff ID and password.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleWorkerLogin} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="workerCode">Staff ID</Label>
+              <Input id="workerCode" type="text" value={workerCode} onChange={(e) => setWorkerCode(e.target.value)} placeholder="W001" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workerPass">Password</Label>
+              <Input id="workerPass" type="password" value={workerPassword} onChange={(e) => setWorkerPassword(e.target.value)} placeholder="••••••" required />
+            </div>
+            <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">Access Dashboard</Button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

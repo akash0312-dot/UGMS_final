@@ -1,6 +1,8 @@
 import { useStore } from "@/store/useStore";
 import { motion } from "framer-motion";
-import { Users, Package, AlertTriangle, DollarSign, TrendingUp, ShoppingCart } from "lucide-react";
+import { Users, Package, AlertTriangle, DollarSign, TrendingUp, ShoppingCart, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { fetchAdminMessagesInApi } from "@/lib/api";
 
 const StatCard = ({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub?: string; color: string }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-card shadow-card border border-border p-5">
@@ -22,6 +24,11 @@ const AdminDashboard = () => {
   const products = useStore((s) => s.products);
   const invoices = useStore((s) => s.invoices);
   const agencies = useStore((s) => s.agencies);
+  
+  const [recentMessages, setRecentMessages] = useState<any[]>([]);
+  useEffect(() => {
+    fetchAdminMessagesInApi().then(msgs => setRecentMessages(msgs.slice(0, 3))).catch(console.error);
+  }, []);
 
   const lowStock = products.filter((p) => p.stock <= p.minStock);
   const totalAttendance = workers.length > 0
@@ -78,7 +85,28 @@ const AdminDashboard = () => {
         </motion.div>
       )}
 
-      {/* Recent Sales removed as requested */}
+      {/* Recent Messages Widget */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border bg-card p-5 mt-6">
+          <div className="flex items-center gap-2 mb-4">
+              <Mail className="h-5 w-5 text-indigo-500" />
+              <h2 className="font-display font-bold">Recent Messages</h2>
+          </div>
+          {recentMessages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent messages.</p>
+          ) : (
+              <div className="space-y-3">
+                  {recentMessages.map(m => (
+                      <div key={m.id} className="p-3 bg-slate-50 rounded-lg flex flex-col gap-1 border">
+                          <div className="flex justify-between items-center w-full">
+                              <span className="font-semibold text-sm">{m.sender_name}</span>
+                              <span className="text-xs text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm text-slate-700 truncate">{m.content}</p>
+                      </div>
+                  ))}
+              </div>
+          )}
+      </motion.div>
     </div>
   );
 };
