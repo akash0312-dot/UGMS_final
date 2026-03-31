@@ -13,7 +13,7 @@ const baseCategories = ["All", "Grains", "Pulses", "Oils", "Essentials", "Bevera
 
 const ShopPage = () => {
   const navigate = useNavigate();
-  const { products, cart, addToCart, removeFromCart, updateCartQuantity, clearCart, addInvoice, setRole, setProducts } = useStore();
+  const { products, cart, addToCart, removeFromCart, updateCartQuantity, clearCart, addInvoice, setRole, setProducts, role, userName, logout } = useStore();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showCart, setShowCart] = useState(false);
@@ -35,6 +35,13 @@ const ShopPage = () => {
       }
     })();
   }, [setProducts]);
+
+  useEffect(() => {
+    if (role !== "customer" && role !== "admin") {
+      toast.error("Please login first to access the customer portal.");
+      navigate("/");
+    }
+  }, [role, navigate]);
 
   const filtered = products.filter(
     (p) =>
@@ -87,7 +94,8 @@ const ShopPage = () => {
         cart.map((c) => ({
           productId: c.product.id,
           quantity: c.quantity,
-        }))
+        })),
+        userName || "Customer"
       );
 
       const inv = generateInvoice();
@@ -117,11 +125,14 @@ const ShopPage = () => {
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => { setRole("none"); navigate("/"); }}>
+            <Button variant="ghost" size="icon" onClick={() => { logout(); navigate("/"); }}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <ShoppingBasket className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-display font-bold">UGMS Shop</h1>
+            <div>
+              <h1 className="text-xl font-display font-bold">UGMS Shop</h1>
+              {userName && <p className="text-xs text-muted-foreground font-medium">Welcome, {userName}</p>}
+            </div>
           </div>
           <Button variant="outline" className="relative" onClick={() => setShowCart(!showCart)}>
             <ShoppingCart className="h-5 w-5 mr-2" />

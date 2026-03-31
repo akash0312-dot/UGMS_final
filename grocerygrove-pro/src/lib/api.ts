@@ -109,9 +109,9 @@ export async function fetchProductsFromApi(): Promise<Product[]> {
   }));
 }
 
-export async function createOrderInApi(items: CreateOrderItemInput[]) {
+export async function createOrderInApi(items: CreateOrderItemInput[], customerName?: string) {
   const payload = {
-    customer_name: "Walk-in Customer",
+    customer_name: customerName || "Walk-in Customer",
     payment_method: "cash",
     items: items.map((i) => ({
       product_id: Number(i.productId),
@@ -655,6 +655,45 @@ export async function signupInApi(input: {
   password: string;
 }): Promise<{ access_token: string }> {
   const res = await fetch(`${API_BASE}/api/auth/signup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Signup failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function customerLoginInApi(email: string, password: string): Promise<{ access_token: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/customer/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Login failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function customerSignupInApi(input: {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+}): Promise<{ access_token: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/customer/signup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

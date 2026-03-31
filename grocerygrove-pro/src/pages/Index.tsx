@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { loginInApi, signupInApi, workerLoginInApi } from "@/lib/api";
+import { loginInApi, signupInApi, workerLoginInApi, customerLoginInApi, customerSignupInApi } from "@/lib/api";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -34,9 +34,63 @@ const Index = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm] = useState("");
 
+  const [showCustomerLogin, setShowCustomerLogin] = useState(false);
+  const [showCustomerSignup, setShowCustomerSignup] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPassword, setCustomerPassword] = useState("");
+  const [customerSignupName, setCustomerSignupName] = useState("");
+  const [customerSignupEmail, setCustomerSignupEmail] = useState("");
+  const [customerSignupPhone, setCustomerSignupPhone] = useState("");
+  const [customerSignupPassword, setCustomerSignupPassword] = useState("");
+  const [customerSignupConfirm, setCustomerSignupConfirm] = useState("");
+
   const enterAsCustomer = () => {
-    setRole("customer");
-    navigate("/shop");
+    setShowCustomerLogin(true);
+  };
+
+  const handleCustomerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await customerLoginInApi(customerEmail.trim(), customerPassword);
+      setAuthToken(res.access_token);
+      const payload = JSON.parse(atob(res.access_token.split('.')[1]));
+      useStore.getState().setUserName(payload?.name || null);
+      setRole("customer");
+      navigate("/shop");
+      toast.success("Welcome back!");
+    } catch (err: any) {
+      toast.error(err.message || "Invalid credentials.");
+    }
+  };
+
+  const handleCustomerSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerSignupName.trim() || !customerSignupEmail.trim() || !customerSignupPassword) {
+      toast.error("Please fill all required fields"); return;
+    }
+    if (customerSignupPassword.length < 6) {
+      toast.error("Password must be at least 6 characters"); return;
+    }
+    if (customerSignupPassword !== customerSignupConfirm) {
+      toast.error("Passwords do not match"); return;
+    }
+    try {
+      const res = await customerSignupInApi({
+        name: customerSignupName.trim(),
+        email: customerSignupEmail.trim(),
+        phone: customerSignupPhone.trim(),
+        password: customerSignupPassword,
+      });
+      setAuthToken(res.access_token);
+      const payload = JSON.parse(atob(res.access_token.split('.')[1]));
+      useStore.getState().setUserName(payload?.name || null);
+      setRole("customer");
+      toast.success("Account created successfully!");
+      setShowCustomerSignup(false);
+      navigate("/shop");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create account");
+    }
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -321,7 +375,7 @@ const Index = () => {
           </DialogHeader>
           <form onSubmit={handleWorkerLogin} className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="workerCode">Staff ID</Label>
+               <Label htmlFor="workerCode">Staff ID</Label>
               <Input id="workerCode" type="text" value={workerCode} onChange={(e) => setWorkerCode(e.target.value)} placeholder="W001" required />
             </div>
             <div className="space-y-2">
@@ -330,6 +384,70 @@ const Index = () => {
             </div>
             <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">Access Dashboard</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Login Dialog */}
+      <Dialog open={showCustomerLogin} onOpenChange={setShowCustomerLogin}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Customer Login</DialogTitle>
+            <DialogDescription>Login to shop and manage your orders.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCustomerLogin} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="cust-email">Email</Label>
+              <Input id="cust-email" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="customer@example.com" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cust-password">Password</Label>
+              <Input id="cust-password" type="password" value={customerPassword} onChange={(e) => setCustomerPassword(e.target.value)} placeholder="••••••" required />
+            </div>
+            <Button type="submit" className="w-full text-white bg-green-600 hover:bg-green-700">Sign In</Button>
+          </form>
+          <div className="text-center mt-2">
+            <Button variant="link" className="text-sm" onClick={() => { setShowCustomerLogin(false); setShowCustomerSignup(true); }}>
+              <UserPlus className="h-4 w-4 mr-1" /> New customer? Sign Up
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Signup Dialog */}
+      <Dialog open={showCustomerSignup} onOpenChange={setShowCustomerSignup}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Create Customer Account</DialogTitle>
+            <DialogDescription>Register to start shopping.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCustomerSignup} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
+              <Input value={customerSignupName} onChange={(e) => setCustomerSignupName(e.target.value)} placeholder="Your full name" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input type="email" value={customerSignupEmail} onChange={(e) => setCustomerSignupEmail(e.target.value)} placeholder="you@example.com" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input value={customerSignupPhone} onChange={(e) => setCustomerSignupPhone(e.target.value)} placeholder="9876543210" />
+            </div>
+            <div className="space-y-2">
+              <Label>Create Password *</Label>
+              <Input type="password" value={customerSignupPassword} onChange={(e) => setCustomerSignupPassword(e.target.value)} placeholder="Min 6 characters" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirm Password *</Label>
+              <Input type="password" value={customerSignupConfirm} onChange={(e) => setCustomerSignupConfirm(e.target.value)} placeholder="Re-enter password" required />
+            </div>
+            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">Create Account</Button>
+          </form>
+          <div className="text-center mt-2">
+            <Button variant="link" className="text-sm" onClick={() => { setShowCustomerSignup(false); setShowCustomerLogin(true); }}>
+              Already have an account? Sign In
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

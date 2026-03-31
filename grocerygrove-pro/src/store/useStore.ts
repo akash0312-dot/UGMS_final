@@ -24,6 +24,9 @@ interface AppState {
   setRole: (role: "admin" | "customer" | "none" | "hr" | "worker") => void;
   authToken: string | null;
   setAuthToken: (token: string | null) => void;
+  userName: string | null;
+  setUserName: (name: string | null) => void;
+  logout: () => void;
 
   // Products
   products: Product[];
@@ -63,6 +66,9 @@ export const useStore = create<AppState>((set, get) => ({
   setRole: (role) => set({ role }),
   authToken: null,
   setAuthToken: (authToken) => set({ authToken }),
+  userName: null,
+  setUserName: (userName) => set({ userName }),
+  logout: () => set({ role: 'none', authToken: null, userName: null }),
 
   products: [],
   setProducts: (products) => set({ products }),

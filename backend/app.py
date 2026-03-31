@@ -17,6 +17,7 @@ from config import get_config
 from models import (
     LeaveRequest,
     Message,
+    Customer,
     Order,
     OrderItem,
     Product,
@@ -136,6 +137,54 @@ def create_app() -> Flask:
                 "category_id": worker.category_id,
                 "category_name": cat_name,
             }
+        )
+        return jsonify({"access_token": access_token}), 200
+
+    @app.route("/api/auth/customer/signup", methods=["POST"])
+    def customer_signup():
+        data = request.get_json() or {}
+        name = (data.get("name") or "").strip()
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password")
+        phone = (data.get("phone") or "").strip()
+
+        if not name or not email or not password:
+            return jsonify({"message": "name, email and password are required"}), 400
+
+        if len(password) < 6:
+            return jsonify({"message": "Password must be at least 6 characters"}), 400
+
+        existing = Customer.query.filter_by(email=email).first()
+        if existing:
+            return jsonify({"message": "Email already registered"}), 409
+
+        customer = Customer(name=name, email=email, phone=phone)
+        customer.set_password(password)
+        db.session.add(customer)
+        db.session.commit()
+
+        access_token = create_access_token(
+            identity=str(customer.id),
+            additional_claims={"id": customer.id, "role": "customer", "name": customer.name}
+        )
+        return jsonify({"access_token": access_token}), 201
+
+    @app.route("/api/auth/customer/login", methods=["POST"])
+    def customer_login():
+        data = request.get_json() or {}
+        email = data.get("email")
+        password = data.get("password")
+
+        if not email or not password:
+            return jsonify({"message": "Email and password required"}), 400
+
+        customer = Customer.query.filter_by(email=email).first()
+        if not customer or not customer.check_password(password):
+            return jsonify({"message": "Invalid credentials"}), 401
+
+        access_token = create_access_token(
+            identity=str(customer.id),
+            additional_claims={"id": customer.id, "role": "customer", "name": customer.name}
         )
         return jsonify({"access_token": access_token}), 200
 
